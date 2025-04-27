@@ -1,106 +1,199 @@
 ﻿@{
-    ViewData["Title"] = "Training Calendar";
+    ViewData["Title"] = "Daily Training Goals";
 }
 
-<div class="text-center mb-4">
-    <h1 class="display-4">Daily Training Goals</h1>
-    <p class="lead">Track your daily progress</p>
-</div>
-
-<div class="row">
-    <div class="col-md-8">
-        <div id="calendar"></div>
+<div class="custom-calendar-wrapper">
+    <div class="calendar-header">
+        <button id="prevMonth" class="calendar-nav">&#8592;</button>
+        <span id="calendarMonth" class="calendar-month"></span>
+        <button id="nextMonth" class="calendar-nav">&#8594;</button>
     </div>
-    <div class="col-md-4">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="card-title mb-0">Today's Exercises</h5>
-            </div>
-            <div class="card-body">
-                <form id="progressForm">
-                    <div class="form-check mb-3">
-                        <input class="form-check-input" type="checkbox" id="pushUps" name="pushUps">
-                        <label class="form-check-label" for="pushUps">
-                            100 Push-ups
-                        </label>
-                    </div>
-                    <div class="form-check mb-3">
-                        <input class="form-check-input" type="checkbox" id="squats" name="squats">
-                        <label class="form-check-label" for="squats">
-                            100 Squats
-                        </label>
-                    </div>
-                    <div class="form-check mb-3">
-                        <input class="form-check-input" type="checkbox" id="steps" name="steps">
-                        <label class="form-check-label" for="steps">
-                            5000 Steps
-                        </label>
-                    </div>
-                    <button type="submit" class="btn btn-primary">Save Progress</button>
-                </form>
-            </div>
-        </div>
-    </div>
+    <div id="calendarGrid" class="calendar-grid"></div>
+    <button id="todayBtn" class="calendar-nav" style="display:none;margin:1.2em auto 0 auto;">Сегодня</button>
 </div>
 
 @section Scripts {
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            var calendarEl = document.getElementById('calendar');
-            var calendar = new FullCalendar.Calendar(calendarEl, {
-                initialView: 'dayGridMonth',
-                headerToolbar: {
-                    left: 'prev,next today',
-                    center: 'title',
-                    right: 'dayGridMonth,timeGridWeek,timeGridDay'
-                },
-                dateClick: function(info) {
-                    // Load progress for selected date
-                    loadProgressForDate(info.date);
-                },
-                events: [
-                    {
-                        title: 'Daily Goals',
-                        start: '2025-04-27',
-                        allDay: true,
-                        backgroundColor: '#28a745',
-                        borderColor: '#28a745'
-                    }
-                ]
-            });
-            calendar.render();
+<script>
+const EXERCISES = [
+    { key: 'pushUps', label: '100 Push-ups' },
+    { key: 'squats', label: '100 Squats' },
+    { key: 'steps', label: '5000 Steps' }
+];
 
-            // Load today's progress
-            loadProgressForDate(new Date());
+let currentMonth = new Date().getMonth();
+let currentYear = new Date().getFullYear();
+let selectedDate = null;
 
-            // Handle form submission
-            document.getElementById('progressForm').addEventListener('submit', function(e) {
-                e.preventDefault();
-                saveProgress();
-            });
+function renderCalendar(month, year) {
+    const grid = document.getElementById('calendarGrid');
+    grid.innerHTML = '';
+    grid.style.display = 'grid';
+    grid.style.gridTemplateColumns = 'repeat(7, 1fr)';
+    grid.style.gap = '0.2rem';
+    const monthName = new Date(year, month).toLocaleString('default', { month: 'long', year: 'numeric' });
+    document.getElementById('calendarMonth').textContent = monthName.charAt(0).toUpperCase() + monthName.slice(1);
+
+    // Days of week
+    ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].forEach((d, i) => {
+        const cell = document.createElement('div');
+        cell.className = 'calendar-cell calendar-dayname';
+        cell.textContent = d;
+        cell.style.gridRow = 1;
+        cell.style.gridColumn = (i+1);
+        grid.appendChild(cell);
+    });
+
+    // Только реальные дни месяца, без пустых ячеек
+    const daysInMonth = new Date(year, month+1, 0).getDate();
+    let row = 2;
+    let col = new Date(year, month, 1).getDay() + 1;
+    for (let date = 1; date <= daysInMonth; date++) {
+        const cell = document.createElement('div');
+        cell.className = 'calendar-cell';
+        const cellDate = new Date(year, month, date);
+        const dateStr = cellDate.toISOString().split('T')[0];
+        cell.setAttribute('data-date', dateStr);
+        const dayNumDiv = document.createElement('div');
+        dayNumDiv.className = 'calendar-day-number';
+        dayNumDiv.textContent = date;
+        cell.appendChild(dayNumDiv);
+        if (isToday(cellDate)) cell.classList.add('calendar-today');
+        if (isCompleted(dateStr)) cell.classList.add('calendar-completed');
+        cell.addEventListener('click', (e) => openDay(cell, dateStr, e));
+        cell.style.gridRow = row;
+        cell.style.gridColumn = col;
+        if (selectedDate === dateStr) {
+            cell.classList.add('calendar-selected');
+            const popup = document.createElement('div');
+            popup.innerHTML = renderDayContent(dateStr);
+            popup.className = 'calendar-day-popup calendar-day-popup-block';
+            cell.appendChild(popup);
+        }
+        grid.appendChild(cell);
+        col++;
+        if (col > 7) { col = 1; row++; }
+    }
+    // Кнопка "Сегодня"
+    const todayBtn = document.getElementById('todayBtn');
+    const now = new Date();
+    if (month !== now.getMonth() || year !== now.getFullYear()) {
+        todayBtn.style.display = '';
+    } else {
+        todayBtn.style.display = 'none';
+    }
+}
+
+function isToday(date) {
+    const now = new Date();
+    return date.getDate() === now.getDate() && date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
+}
+function isCompleted(dateStr) {
+    const progress = JSON.parse(localStorage.getItem(`progress_${dateStr}`) || '{}');
+    return EXERCISES.every(e => progress[e.key]);
+}
+function openDay(cell, dateStr, e) {
+    if (e && e.target.closest('.calendar-day-popup')) return;
+    document.querySelectorAll('.calendar-selected').forEach(c => {
+        c.classList.remove('calendar-selected');
+        const num = c.querySelector('.calendar-day-number');
+        c.innerHTML = '';
+        if (num) c.appendChild(num);
+    });
+    selectedDate = dateStr;
+    cell.classList.add('calendar-selected');
+    if (!cell.querySelector('.calendar-day-number')) {
+        const dayNumDiv = document.createElement('div');
+        dayNumDiv.className = 'calendar-day-number';
+        dayNumDiv.textContent = cell.textContent;
+        cell.innerHTML = '';
+        cell.appendChild(dayNumDiv);
+    }
+    const popup = document.createElement('div');
+    popup.innerHTML = renderDayContent(dateStr);
+    popup.className = 'calendar-day-popup calendar-day-popup-block';
+    cell.appendChild(popup);
+    attachCheckboxHandlers(dateStr);
+    setTimeout(() => {
+        document.addEventListener('mousedown', closePopupOnClick, { once: true });
+    }, 0);
+}
+function closePopupOnClick(e) {
+    const popup = document.querySelector('.calendar-selected .calendar-day-popup');
+    if (!popup) return;
+    if (!popup.contains(e.target)) {
+        selectedDate = null;
+        renderCalendar(currentMonth, currentYear);
+    } else {
+        setTimeout(() => {
+            document.addEventListener('mousedown', closePopupOnClick, { once: true });
+        }, 0);
+    }
+}
+function renderDayContent(dateStr) {
+    const progress = JSON.parse(localStorage.getItem(`progress_${dateStr}`) || '{}');
+    let html = `<form id='popupForm'>`;
+    EXERCISES.forEach(e => {
+        html += `<label class='popup-checkbox'><input type='checkbox' name='${e.key}' ${progress[e.key] ? 'checked' : ''}/> ${e.label}</label>`;
+    });
+    html += `<button type='submit' class='popup-save-btn'>Save</button></form>`;
+    return html;
+}
+function attachCheckboxHandlers(dateStr) {
+    const form = document.getElementById('popupForm');
+    if (!form) return;
+    form.onsubmit = function(e) {
+        e.preventDefault();
+        const data = {};
+        EXERCISES.forEach(e => {
+            data[e.key] = form[e.key].checked;
         });
-
-        function loadProgressForDate(date) {
-            // In a real app, you would load this from localStorage or a backend
-            const dateStr = date.toISOString().split('T')[0];
-            const progress = JSON.parse(localStorage.getItem(`progress_${dateStr}`) || '{}');
-            
-            document.getElementById('pushUps').checked = progress.pushUps || false;
-            document.getElementById('squats').checked = progress.squats || false;
-            document.getElementById('steps').checked = progress.steps || false;
-        }
-
-        function saveProgress() {
-            const date = new Date();
-            const dateStr = date.toISOString().split('T')[0];
-            const progress = {
-                pushUps: document.getElementById('pushUps').checked,
-                squats: document.getElementById('squats').checked,
-                steps: document.getElementById('steps').checked
-            };
-            
-            localStorage.setItem(`progress_${dateStr}`, JSON.stringify(progress));
-            alert('Progress saved successfully!');
-        }
-    </script>
+        localStorage.setItem(`progress_${dateStr}`, JSON.stringify(data));
+        selectedDate = dateStr;
+        renderCalendar(currentMonth, currentYear);
+        showSaveStatus();
+    };
+    form.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+        cb.addEventListener('click', ev => ev.stopPropagation());
+    });
+}
+function showSaveStatus() {
+    let notif = document.getElementById('calendarNotif');
+    if (!notif) {
+        notif = document.createElement('div');
+        notif.id = 'calendarNotif';
+        notif.className = 'calendar-notif';
+        document.body.appendChild(notif);
+    }
+    notif.textContent = 'Progress saved!';
+    notif.style.opacity = 1;
+    setTimeout(() => notif.style.opacity = 0, 1200);
+}
+document.getElementById('prevMonth').onclick = () => {
+    currentMonth--;
+    if (currentMonth < 0) {
+        currentMonth = 11;
+        currentYear--;
+    }
+    selectedDate = null;
+    renderCalendar(currentMonth, currentYear);
+};
+document.getElementById('nextMonth').onclick = () => {
+    currentMonth++;
+    if (currentMonth > 11) {
+        currentMonth = 0;
+        currentYear++;
+    }
+    selectedDate = null;
+    renderCalendar(currentMonth, currentYear);
+};
+document.getElementById('todayBtn').onclick = () => {
+    const now = new Date();
+    currentMonth = now.getMonth();
+    currentYear = now.getFullYear();
+    selectedDate = now.toISOString().split('T')[0];
+    renderCalendar(currentMonth, currentYear);
+};
+// Инициализация
+renderCalendar(currentMonth, currentYear);
+</script>
 }
