@@ -6,9 +6,8 @@ EXPOSE 443
 FROM mcr.microsoft.com/dotnet/sdk:6.0 AS build
 WORKDIR /src
 COPY ["CalendarTrainingApp.csproj", "./"]
-RUN dotnet restore "CalendarTrainingApp.csproj"
 COPY . .
-WORKDIR "/src"
+RUN dotnet restore "CalendarTrainingApp.csproj"
 RUN dotnet build "CalendarTrainingApp.csproj" -c Release -o /app/build
 
 FROM build AS publish
@@ -18,4 +17,4 @@ FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
 RUN mkdir -p /app/Data
-ENTRYPOINT ["dotnet", "CalendarTrainingApp.dll"] 
+ENTRYPOINT ["dotnet", "CalendarTrainingApp.dll"]
