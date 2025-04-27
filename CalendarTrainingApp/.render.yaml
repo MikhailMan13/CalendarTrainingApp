@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: workout-calendar
+    env: dotnet
+    buildCommand: dotnet publish -c Release -o output
+    startCommand: dotnet CalendarTrainingApp.dll
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+    disk:
+      name: workout-data
+      mountPath: /app/Data
+      sizeGB: 1 

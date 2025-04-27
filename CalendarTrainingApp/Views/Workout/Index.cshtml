@@ -1,0 +1,65 @@
+@model IEnumerable<CalendarTrainingApp.Models.WorkoutTask>
+
+@{
+    ViewData["Title"] = "Workout Calendar";
+}
+
+<h1>Workout Calendar</h1>
+
+<div class="container">
+    <div class="row mb-3">
+        <div class="col">
+            <form asp-action="CreateTask" method="post">
+                <div class="input-group">
+                    <input type="date" name="date" class="form-control" required />
+                    <button type="submit" class="btn btn-primary">Add Day</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="row">
+        @foreach (var task in Model)
+        {
+            <div class="col-md-4 mb-4">
+                <div class="card @(task.IsAllCompleted ? "bg-success text-white" : "")">
+                    <div class="card-header">
+                        <h5 class="card-title">@task.Date.ToString("dd.MM.yyyy")</h5>
+                    </div>
+                    <div class="card-body">
+                        <form asp-action="UpdateTask" method="post">
+                            <input type="hidden" name="id" value="@task.Id" />
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Push-ups (@task.PushUpsCompleted/100)</label>
+                                <input type="number" name="pushUps" value="@task.PushUpsCompleted" class="form-control" />
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Squats (@task.SquatsCompleted/100)</label>
+                                <input type="number" name="squats" value="@task.SquatsCompleted" class="form-control" />
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Steps (@task.StepsCompleted/5000)</label>
+                                <input type="number" name="steps" value="@task.StepsCompleted" class="form-control" />
+                            </div>
+                            
+                            <button type="submit" class="btn btn-primary">Update</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+<style>
+    .card {
+        transition: all 0.3s ease;
+    }
+    .card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+</style> 
