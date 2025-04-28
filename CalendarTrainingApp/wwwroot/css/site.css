@@ -599,3 +599,21 @@ button:hover, .btn-primary:hover {
     padding: 0.2em 0.1em 0.1em 0.1em;
   }
 }
+
+.today-btn {
+  min-width: 7.5em;
+  padding: 0.7em 1.5em;
+  font-size: 1.15rem;
+  box-sizing: border-box;
+  display: block;
+  margin: 1.2em auto 0 auto !important;
+  white-space: nowrap;
+}
+@media (max-width: 600px) {
+  .today-btn {
+    min-width: 0;
+    width: 98vw;
+    font-size: 1rem;
+    padding: 0.7em 0.2em;
+  }
+}
