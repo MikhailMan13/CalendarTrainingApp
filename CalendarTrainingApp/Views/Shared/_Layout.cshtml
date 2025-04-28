@@ -4,34 +4,46 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - Daily Training Goals</title>
-    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
-    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/CalendarTrainingApp.styles.css" asp-append-version="true" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/site.css" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css" />
 </head>
 <body>
     <header>
-        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-dark bg-primary border-bottom box-shadow mb-3">
-            <div class="container">
-                <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">Daily Training Goals</a>
+        <nav class="main-navbar minimal-navbar">
+            <div class="container-navbar">
+                <span class="logo">Daily Training Goals</span>
+                <button id="themeToggle" class="theme-toggle" aria-label="Toggle theme">
+                    <span class="theme-toggle-icon"></span>
+                </button>
             </div>
         </nav>
     </header>
-    <div class="container">
-        <main role="main" class="pb-3">
-            @RenderBody()
-        </main>
-    </div>
-
-    <footer class="border-top footer text-muted">
-        <div class="container">
-            &copy; 2025 - Daily Training Goals
-        </div>
-    </footer>
-    <script src="~/lib/jquery/dist/jquery.min.js"></script>
-    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="~/js/site.js" asp-append-version="true"></script>
+    <main class="main-content">
+        @RenderBody()
+    </main>
     <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js"></script>
+    <script>
+        // Theme toggle logic
+        const root = document.documentElement;
+        const themeToggle = document.getElementById('themeToggle');
+        const icon = themeToggle.querySelector('.theme-toggle-icon');
+        function setTheme(theme) {
+            root.setAttribute('data-theme', theme);
+            localStorage.setItem('theme', theme);
+            icon.className = 'theme-toggle-icon ' + (theme === 'dark' ? 'dark' : 'light');
+        }
+        function toggleTheme() {
+            const current = root.getAttribute('data-theme') || 'light';
+            setTheme(current === 'light' ? 'dark' : 'light');
+        }
+        themeToggle.addEventListener('click', () => {
+            toggleTheme();
+        });
+        // Init theme
+        const savedTheme = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        setTheme(savedTheme);
+    </script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>
